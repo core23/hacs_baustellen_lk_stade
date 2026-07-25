@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -12,7 +13,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfLength
+from homeassistant.const import EntityCategory, UnitOfLength
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
@@ -32,8 +33,19 @@ MAX_LISTED_ROADWORKS = 25
 class BaustellenSensorDescription(SensorEntityDescription):
     """Beschreibt einen Sensor und die zugehörige Auswertung."""
 
-    value_fn: Callable[[BaustellenData], int | float | None]
-    roadworks_fn: Callable[[BaustellenData], list[Roadwork]]
+    value_fn: Callable[[BaustellenData], int | float | datetime | None]
+    # Ohne Auswertung führt der Sensor keine Baustellen in seinen Attributen.
+    roadworks_fn: Callable[[BaustellenData], list[Roadwork]] | None = None
+
+
+def _last_change(data: BaustellenData) -> datetime | None:
+    """Jüngste Änderung an den erfassten Baustellen."""
+    changes = [
+        roadwork.last_change
+        for roadwork in data.roadworks
+        if roadwork.last_change is not None
+    ]
+    return max(changes, default=None)
 
 
 SENSORS: tuple[BaustellenSensorDescription, ...] = (
@@ -66,6 +78,14 @@ SENSORS: tuple[BaustellenSensorDescription, ...] = (
         value_fn=lambda data: data.active[0].distance_km if data.active else None,
         roadworks_fn=lambda data: data.active[:1],
     ),
+    BaustellenSensorDescription(
+        key="last_change",
+        translation_key="last_change",
+        icon="mdi:database-clock",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=_last_change,
+    ),
 )
 
 
@@ -97,19 +117,20 @@ class BaustellenSensor(BaustellenEntity, SensorEntity):
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{description.key}"
 
     @property
-    def native_value(self) -> int | float | None:
+    def native_value(self) -> int | float | datetime | None:
         """Aktueller Messwert."""
         return self.entity_description.value_fn(self.coordinator.data)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Die zugrunde liegenden Baustellen als Liste."""
-        today = dt_util.now().date()
-        roadworks = self.entity_description.roadworks_fn(self.coordinator.data)
-        return {
-            ATTR_ROADWORKS: [
+        attributes: dict[str, Any] = {"karte": MAP_URL}
+        if (roadworks_fn := self.entity_description.roadworks_fn) is not None:
+            today = dt_util.now().date()
+            attributes[ATTR_ROADWORKS] = [
                 roadwork_as_dict(roadwork, today)
-                for roadwork in roadworks[:MAX_LISTED_ROADWORKS]
-            ],
-            "karte": MAP_URL,
-        }
+                for roadwork in roadworks_fn(self.coordinator.data)[
+                    :MAX_LISTED_ROADWORKS
+                ]
+            ]
+        return attributes

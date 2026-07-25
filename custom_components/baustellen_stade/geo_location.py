@@ -10,9 +10,9 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
 from .api import Roadwork
-from .const import SOURCE
+from .const import DEFAULT_ICON, SOURCE
 from .coordinator import BaustellenConfigEntry, BaustellenCoordinator
-from .entity import BaustellenEntity, roadwork_as_dict
+from .entity import BaustellenEntity, roadwork_as_dict, roadwork_icon
 
 # Die Entitäten werden ausschließlich aus den Daten des Koordinators gespeist.
 PARALLEL_UPDATES = 0
@@ -47,7 +47,7 @@ class BaustellenGeoLocationEvent(BaustellenEntity, GeolocationEvent):
     """Eine einzelne Baustelle mit ihrer Entfernung zum Beobachtungspunkt."""
 
     _attr_has_entity_name = False
-    _attr_icon = "mdi:traffic-cone"
+    _attr_icon = DEFAULT_ICON
     _attr_source = SOURCE
     _attr_unit_of_measurement = UnitOfLength.KILOMETERS
 
@@ -76,6 +76,7 @@ class BaustellenGeoLocationEvent(BaustellenEntity, GeolocationEvent):
         if roadwork is None:
             return
         self._attr_name = roadwork.title
+        self._attr_icon = roadwork_icon(roadwork)
         self._attr_distance = roadwork.distance_km
         self._attr_latitude = roadwork.latitude
         self._attr_longitude = roadwork.longitude

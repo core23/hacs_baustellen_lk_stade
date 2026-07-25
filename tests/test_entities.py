@@ -21,12 +21,14 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
 
 from .conftest import make_roadwork, setup_integration
 
 SENSOR_ACTIVE = "sensor.baustellen_landkreis_stade_current_roadworks"
 SENSOR_UPCOMING = "sensor.baustellen_landkreis_stade_planned_roadworks"
 SENSOR_NEAREST = "sensor.baustellen_landkreis_stade_nearest_roadwork"
+SENSOR_LAST_CHANGE = "sensor.baustellen_landkreis_stade_data_updated"
 
 
 async def test_setup_creates_sensors_and_geo_locations(
@@ -55,6 +57,61 @@ async def test_setup_creates_sensors_and_geo_locations(
     assert float(geo_state.state) > 0
 
 
+async def test_geo_location_display(
+    hass: HomeAssistant, mock_api: AsyncMock, config_entry: MockConfigEntry
+) -> None:
+    """Name, Symbol und Zeitraum sind auf die Kartendarstellung ausgelegt."""
+    mock_api.async_get_roadworks.return_value = [
+        make_roadwork("1", end_offset=5),
+        make_roadwork("2", place="Buxtehude", category="Umleitung", start_offset=3),
+    ]
+    await setup_integration(hass, config_entry)
+
+    states = {
+        state.attributes["external_id"]: state
+        for state in [
+            hass.states.get(entity_id)
+            for entity_id in hass.states.async_entity_ids("geo_location")
+        ]
+    }
+
+    active = states["1"]
+    assert active.attributes["friendly_name"] == "Vollsperrung Stade"
+    assert active.attributes["icon"] == "mdi:block-helper"
+    assert active.attributes["zeitraum"].startswith("bis ")
+    assert active.attributes["restdauer_tage"] == 5
+
+    assert active.attributes["laenge_m"] == 250
+    assert active.attributes["sachbearbeiter"] == "Frau Beispiel"
+    assert active.attributes["aktenzeichen"] == "2026B00042"
+    assert dt_util.parse_datetime(active.attributes["zuletzt_geaendert"]) is not None
+
+    upcoming = states["2"]
+    assert upcoming.attributes["friendly_name"] == "Umleitung Buxtehude"
+    assert upcoming.attributes["icon"] == "mdi:arrow-decision"
+    assert "–" in upcoming.attributes["zeitraum"]
+
+
+async def test_last_change_sensor_reports_newest_edit(
+    hass: HomeAssistant, mock_api: AsyncMock, config_entry: MockConfigEntry
+) -> None:
+    """Der Datenstand ist die jüngste Änderung der erfassten Baustellen."""
+    roadworks = [
+        make_roadwork("1", changed_hours_ago=48),
+        make_roadwork("2", place="Buxtehude", changed_hours_ago=2),
+    ]
+    mock_api.async_get_roadworks.return_value = roadworks
+    await setup_integration(hass, config_entry)
+
+    state = hass.states.get(SENSOR_LAST_CHANGE)
+    assert state is not None
+    reported = dt_util.parse_datetime(state.state)
+    assert reported is not None
+    assert abs(reported - roadworks[1].last_change) < timedelta(seconds=1)
+    # Der Diagnosesensor listet keine einzelnen Baustellen auf.
+    assert "baustellen" not in state.attributes
+
+
 async def test_sensor_attributes_list_roadworks(
     hass: HomeAssistant, mock_api: AsyncMock, config_entry: MockConfigEntry
 ) -> None:
@@ -68,6 +125,10 @@ async def test_sensor_attributes_list_roadworks(
     assert entry["ort"] == "Stade"
     assert entry["entfernung"] == 1.5
     assert entry["beginn"] < entry["ende"]
+    assert entry["zeitraum"].startswith("bis ")
+    assert entry["restdauer_tage"] == 5
+    assert (entry["latitude"], entry["longitude"]) == (53.6, 9.48)
+    assert entry["richtung"] == "NO"
 
 
 async def test_upcoming_beyond_preview_is_ignored(

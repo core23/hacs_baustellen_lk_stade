@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
+from homeassistant.const import ATTR_LATITUDE, ATTR_LONGITUDE
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -15,14 +16,23 @@ from .const import (
     ATTR_DESCRIPTION,
     ATTR_DETOUR,
     ATTR_DETOUR_NUMBER,
+    ATTR_DIRECTION,
     ATTR_END,
     ATTR_EXTERNAL_ID,
+    ATTR_FILE_NUMBER,
+    ATTR_LAST_CHANGE,
+    ATTR_LENGTH,
     ATTR_NOTE,
+    ATTR_OFFICER,
+    ATTR_PERIOD,
     ATTR_PLACE,
+    ATTR_REMAINING_DAYS,
     ATTR_ROAD_TYPE,
     ATTR_START,
     ATTR_STATUS,
     ATTRIBUTION,
+    CATEGORY_ICONS,
+    DEFAULT_ICON,
     DEFAULT_NAME,
     DOMAIN,
     MAP_URL,
@@ -37,6 +47,35 @@ def _day(value: datetime | None) -> str | None:
     if value is None:
         return None
     return value.date().isoformat()
+
+
+def _german_day(value: datetime) -> str:
+    """Tagesdatum in der hierzulande üblichen Schreibweise."""
+    return value.strftime("%d.%m.%Y")
+
+
+def roadwork_icon(roadwork: Roadwork) -> str:
+    """Symbol zur Kategorie der Baustelle."""
+    return CATEGORY_ICONS.get(roadwork.category or "", DEFAULT_ICON)
+
+
+def roadwork_period(roadwork: Roadwork, today: date) -> str:
+    """Zeitraum als kurzer Text, der auch als Kartenbeschriftung taugt."""
+    start, end = roadwork.start, roadwork.end
+    if start is not None and start.date() > today:
+        if end is None:
+            return f"ab {_german_day(start)}"
+        return f"{start.strftime('%d.%m.')}–{_german_day(end)}"
+    if end is None:
+        return "ohne Enddatum"
+    return f"bis {_german_day(end)}"
+
+
+def roadwork_remaining_days(roadwork: Roadwork, today: date) -> int | None:
+    """Verbleibende Tage bis zum Ende; `0` bedeutet „endet heute“."""
+    if roadwork.end is None:
+        return None
+    return max((roadwork.end.date() - today).days, 0)
 
 
 def _shorten(value: str | None) -> str | None:
@@ -63,10 +102,23 @@ def roadwork_as_dict(
         ATTR_DESCRIPTION: description if full_description else _shorten(description),
         ATTR_START: _day(roadwork.start),
         ATTR_END: _day(roadwork.end),
+        ATTR_PERIOD: roadwork_period(roadwork, today),
+        ATTR_REMAINING_DAYS: roadwork_remaining_days(roadwork, today),
         ATTR_DETOUR: roadwork.detour,
         ATTR_DETOUR_NUMBER: roadwork.detour_number,
         ATTR_NOTE: roadwork.note,
         ATTR_COMPANY: roadwork.company,
+        ATTR_OFFICER: roadwork.officer,
+        ATTR_FILE_NUMBER: roadwork.file_number,
+        ATTR_LENGTH: roadwork.length_m,
+        ATTR_LAST_CHANGE: roadwork.last_change.isoformat()
+        if roadwork.last_change
+        else None,
+        # Der Datenbestand kennt keine Straßennamen; die Position beschreibt die
+        # Baustelle deshalb genauer als jedes Textfeld.
+        ATTR_LATITUDE: round(roadwork.latitude, 5),
+        ATTR_LONGITUDE: round(roadwork.longitude, 5),
+        ATTR_DIRECTION: roadwork.direction,
         "entfernung": roadwork.distance_km,
     }
 

@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 import html
-from math import asin, cos, radians, sin, sqrt
+from itertools import pairwise
+from math import asin, atan2, cos, degrees, radians, sin, sqrt
 import re
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -25,6 +26,10 @@ _BLANK_RE = re.compile(r"\n{3,}")
 
 _EARTH_RADIUS_KM = 6371.0
 _PAGE_SIZE = 1000
+_COMPASS = ("N", "NO", "O", "SO", "S", "SW", "W", "NW")
+
+# Höchstlänge des Grundes, der ersatzweise die Baustelle benennt.
+MAX_REASON_LENGTH = 50
 
 
 class BaustellenApiError(Exception):
@@ -64,6 +69,32 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * _EARTH_RADIUS_KM * asin(sqrt(a))
 
 
+def compass_direction(lat1: float, lon1: float, lat2: float, lon2: float) -> str:
+    """Himmelsrichtung vom Beobachtungspunkt aus als Kürzel („NO“)."""
+    d_lon = radians(lon2 - lon1)
+    north = cos(radians(lat1)) * sin(radians(lat2)) - sin(radians(lat1)) * cos(
+        radians(lat2)
+    ) * cos(d_lon)
+    east = sin(d_lon) * cos(radians(lat2))
+    bearing = (degrees(atan2(east, north)) + 360) % 360
+    return _COMPASS[round(bearing / 45) % len(_COMPASS)]
+
+
+def path_length_m(paths: list[list[list[float]]]) -> int:
+    """Länge des Linienzugs in Metern.
+
+    Das Feld `Shape__Length` des Dienstes bleibt bewusst ungenutzt: Es liegt in
+    Web-Mercator-Metern vor und fällt auf der Breite des Landkreises um den
+    Faktor 1,68 zu groß aus.
+    """
+    metres = 0.0
+    for path in paths:
+        points = [point for point in path if len(point) >= 2]
+        for start, end in pairwise(points):
+            metres += haversine_km(start[1], start[0], end[1], end[0]) * 1000
+    return round(metres)
+
+
 @dataclass(frozen=True, slots=True)
 class Roadwork:
     """Eine Baustelle oder Sperrung aus dem Datenbestand des Landkreises."""
@@ -79,19 +110,40 @@ class Roadwork:
     detour_number: str | None
     note: str | None
     company: str | None
+    officer: str | None
+    file_number: str | None
+    length_m: int
+    last_change: datetime | None
     latitude: float
     longitude: float
     distance_km: float
+    direction: str
+
+    @property
+    def reason(self) -> str | None:
+        """Grund der Baustelle als Kurzform der ersten Beschreibungszeile."""
+        if not self.description:
+            return None
+        first_line = self.description.split("\n", 1)[0].strip(" .,;:-")
+        if not first_line:
+            return None
+        if len(first_line) <= MAX_REASON_LENGTH:
+            return first_line
+        return f"{first_line[:MAX_REASON_LENGTH].rsplit(' ', 1)[0]}…"
 
     @property
     def title(self) -> str:
         """Kurzbezeichnung für Entitätsnamen und Zusammenfassungen."""
-        # "Ort" ist im Datenbestand häufig leer; dann tritt der Straßentyp an
-        # seine Stelle, damit die Entität unterscheidbar bleibt.
-        parts = [part for part in (self.place or self.road_type, self.category) if part]
+        # Die Kategorie steht vorn, weil die Karten-Karte ohne eigene
+        # Beschriftung die Anfangsbuchstaben der Wörter zeigt. "Ort" ist nur
+        # selten befüllt; dann benennt der Grund die Baustelle
+        # ("Vollsperrung Neubau Gerichtsherrenbrücke"), ersatzweise der
+        # Straßentyp.
+        name = self.place or self.reason or self.road_type
+        parts = [part for part in (self.category, name) if part]
         if not parts:
             parts = ["Baustelle"]
-        return " – ".join(parts)
+        return " ".join(parts)
 
     def status(self, today: date) -> str:
         """Status bezogen auf den übergebenen Tag."""
@@ -195,12 +247,8 @@ class BaustellenApi:
         if object_id is None:
             return None
 
-        points = [
-            point
-            for path in (feature.get("geometry") or {}).get("paths") or []
-            for point in path
-            if len(point) >= 2
-        ]
+        paths = (feature.get("geometry") or {}).get("paths") or []
+        points = [point for path in paths for point in path if len(point) >= 2]
         if not points:
             return None
 
@@ -229,9 +277,14 @@ class BaustellenApi:
             detour_number=_plain_text(attributes.get("Umleitungsnummer")),
             note=_plain_text(attributes.get("Hinweis")),
             company=_plain_text(attributes.get("Firma")),
+            officer=_plain_text(attributes.get("Sachbearbeiter")),
+            file_number=_plain_text(attributes.get("ALVA")),
+            length_m=path_length_m(paths),
+            last_change=_timestamp(attributes.get("EditDate")),
             latitude=float(centre[1]),
             longitude=float(centre[0]),
             distance_km=round(distance, 2),
+            direction=compass_direction(latitude, longitude, centre[1], centre[0]),
         )
 
     async def async_check_availability(self) -> None:

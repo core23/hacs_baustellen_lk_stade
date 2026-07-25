@@ -56,6 +56,21 @@ ROAD_TYPES: Final = [
     "Gemeindestraße",
 ]
 
+# Je Kategorie ein eigenes Symbol, damit sich die Marker auf der Karte
+# (Map-Card mit `label_mode: icon`) auf einen Blick unterscheiden lassen.
+DEFAULT_ICON: Final = "mdi:traffic-cone"
+CATEGORY_ICONS: Final = {
+    "Vollsperrung": "mdi:block-helper",
+    "Halbseitige Sperrung": "mdi:traffic-light",
+    "Einengung Fahrbahn": "mdi:arrow-collapse-horizontal",
+    "Einengung Geh- / Radweg": "mdi:bike",
+    "Sperrung Geh- / Radweg": "mdi:walk",
+    "Seitenraumsperrung": "mdi:fence",
+    "Einbahnstraßenregelung": "mdi:arrow-right-bold",
+    "Umleitung": "mdi:arrow-decision",
+    "geplante Baustelle": "mdi:calendar-clock",
+}
+
 STATUS_ACTIVE: Final = "aktiv"
 STATUS_UPCOMING: Final = "geplant"
 
@@ -64,10 +79,17 @@ ATTR_COMPANY: Final = "firma"
 ATTR_DESCRIPTION: Final = "beschreibung"
 ATTR_DETOUR: Final = "umleitung"
 ATTR_DETOUR_NUMBER: Final = "umleitungsnummer"
+ATTR_DIRECTION: Final = "richtung"
 ATTR_END: Final = "ende"
 ATTR_EXTERNAL_ID: Final = "external_id"
+ATTR_FILE_NUMBER: Final = "aktenzeichen"
+ATTR_LAST_CHANGE: Final = "zuletzt_geaendert"
+ATTR_LENGTH: Final = "laenge_m"
 ATTR_NOTE: Final = "hinweis"
+ATTR_OFFICER: Final = "sachbearbeiter"
+ATTR_PERIOD: Final = "zeitraum"
 ATTR_PLACE: Final = "ort"
+ATTR_REMAINING_DAYS: Final = "restdauer_tage"
 ATTR_ROAD_TYPE: Final = "strassentyp"
 ATTR_ROADWORKS: Final = "baustellen"
 ATTR_START: Final = "beginn"

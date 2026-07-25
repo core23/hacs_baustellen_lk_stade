@@ -50,6 +50,9 @@
       },
       "nearest": {
         "name": "Nächste Baustelle"
+      },
+      "last_change": {
+        "name": "Datenstand"
       }
     }
   }

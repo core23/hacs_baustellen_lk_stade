@@ -50,6 +50,9 @@
       },
       "nearest": {
         "name": "Nearest roadwork"
+      },
+      "last_change": {
+        "name": "Data updated"
       }
     }
   }

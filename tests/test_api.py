@@ -10,6 +10,7 @@ from custom_components.baustellen_stade.api import (
     BaustellenApi,
     BaustellenApiError,
     Roadwork,
+    compass_direction,
     haversine_km,
 )
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -31,6 +32,9 @@ def _feature(**attributes: object) -> dict:
         "Umleitungsnummer": None,
         "Firma": "Beispiel &amp; Co.",
         "Hinweis": None,
+        "Sachbearbeiter": "Frau von Iven",
+        "ALVA": "2026B00310",
+        "EditDate": 1767222000000,
     }
     return {
         "attributes": base | attributes,
@@ -59,6 +63,35 @@ def test_parse_feature_cleans_html_and_computes_distance() -> None:
     assert roadwork.distance_km == pytest.approx(0.8, abs=0.2)
     assert roadwork.latitude == 53.61
     assert roadwork.start == datetime(2025, 12, 31, 23, tzinfo=UTC)
+    assert roadwork.officer == "Frau von Iven"
+    assert roadwork.file_number == "2026B00310"
+    assert roadwork.last_change == datetime(2025, 12, 31, 23, tzinfo=UTC)
+
+
+@pytest.mark.parametrize(
+    ("latitude", "longitude", "expected"),
+    [
+        (53.7000, 9.4757, "N"),
+        (53.5928, 9.6000, "O"),
+        (53.4000, 9.4757, "S"),
+        (53.5928, 9.3000, "W"),
+        (53.7000, 9.6000, "NO"),
+    ],
+)
+def test_compass_direction(latitude: float, longitude: float, expected: str) -> None:
+    """Die Himmelsrichtung zeigt vom Beobachtungspunkt zur Baustelle."""
+    assert compass_direction(*STADE, latitude, longitude) == expected
+
+
+def test_parse_feature_measures_the_closed_section() -> None:
+    """Die Länge entsteht aus der Geometrie, nicht aus `Shape__Length`."""
+    api = BaustellenApi(session=None)  # type: ignore[arg-type]
+    # Der Dienst liefert mit 1902 m einen um den Faktor 1,68 zu großen Wert.
+    feature = _feature(Shape__Length=1902.0)
+    roadwork = api._parse_feature(feature, *STADE, date(2026, 7, 25))
+
+    assert roadwork is not None
+    assert roadwork.length_m == pytest.approx(1145, abs=20)
 
 
 def test_parse_feature_skips_finished_and_geometryless() -> None:
@@ -104,13 +137,36 @@ def test_status_depends_on_start_date(start_ms: int, expected: str) -> None:
     assert roadwork.status(date(2026, 7, 25)) == expected
 
 
-def test_title_falls_back_to_road_type() -> None:
-    """Ohne Ortsangabe tritt der Straßentyp an dessen Stelle."""
+def test_title_falls_back_to_reason_then_road_type() -> None:
+    """Ohne Ortsangabe benennt der Grund die Baustelle, sonst der Straßentyp."""
     api = BaustellenApi(session=None)  # type: ignore[arg-type]
-    roadwork = api._parse_feature(_feature(Ort=None), *STADE, date(2026, 7, 25))
+    today = date(2026, 7, 25)
+
+    roadwork = api._parse_feature(_feature(Ort=None), *STADE, today)
+    assert isinstance(roadwork, Roadwork)
+    assert roadwork.title == "Vollsperrung Asphaltarbeiten"
+
+    without_reason = api._parse_feature(_feature(Ort=None, Bereich=None), *STADE, today)
+    assert isinstance(without_reason, Roadwork)
+    assert without_reason.title == "Vollsperrung Kreisstraße"
+
+
+def test_long_reason_is_shortened_for_the_title() -> None:
+    """Lange Gründe werden für den Namen auf Wortgrenze gekürzt."""
+    api = BaustellenApi(session=None)  # type: ignore[arg-type]
+    reason = (
+        "Erneuerung der Fahrbahndecke einschließlich der Nebenanlagen "
+        "im gesamten Ortsdurchfahrtsbereich"
+    )
+    roadwork = api._parse_feature(
+        _feature(Ort=None, Bereich=reason), *STADE, date(2026, 7, 25)
+    )
 
     assert isinstance(roadwork, Roadwork)
-    assert roadwork.title == "Kreisstraße – Vollsperrung"
+    assert roadwork.reason is not None
+    assert len(roadwork.reason) <= 51
+    assert roadwork.reason.endswith("…")
+    assert roadwork.title.startswith("Vollsperrung Erneuerung der Fahrbahndecke")
 
 
 async def test_query_raises_on_service_error(hass, aioclient_mock) -> None:

@@ -38,6 +38,7 @@ def make_roadwork(
     start_offset: int = -1,
     end_offset: int = 5,
     distance_km: float = 1.5,
+    changed_hours_ago: int = 24,
 ) -> Roadwork:
     """Eine Baustelle mit Datumsangaben relativ zu heute erzeugen."""
     midnight = dt_util.start_of_local_day().astimezone(UTC)
@@ -53,9 +54,14 @@ def make_roadwork(
         detour_number=None,
         note=None,
         company="Beispiel GmbH",
+        officer="Frau Beispiel",
+        file_number="2026B00042",
+        length_m=250,
+        last_change=dt_util.utcnow() - timedelta(hours=changed_hours_ago),
         latitude=53.6,
         longitude=9.48,
         distance_km=distance_km,
+        direction="NO",
     )
 
 
