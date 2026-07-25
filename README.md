@@ -197,8 +197,12 @@ automation:
   des Kreisgebiets liefert die Integration keine Treffer.
 - Beginn- und Enddatum sind tagesgenau. Eine Baustelle gilt als *aktiv*, solange
   das aktuelle Datum zwischen Beginn und Ende liegt.
-- Beendete Baustellen werden beim nächsten Abruf automatisch entfernt – die
-  zugehörigen `geo_location`-Entitäten verschwinden dann ebenfalls.
+- Meldet der Dienst eine Baustelle nicht mehr – weil sie beendet ist, aus dem
+  Umkreis gerückt ist oder von den Filtern ausgeschlossen wird –, verschwindet
+  ihre `geo_location`-Entität beim nächsten Abruf samt Registry-Eintrag. Das
+  passiert auch beim Start, wenn die Baustelle wegfiel, während Home Assistant
+  nicht lief. Ein Ausfall des Dienstes löscht dagegen nichts; die Entitäten
+  werden dann nur als *nicht verfügbar* gemeldet.
 - Straßennamen enthält der Datenbestand nicht, und das Feld „Ort“ (die Gemeinde)
   ist nur selten gefüllt (rund 4 % der laufenden Meldungen). Der Entitätsname
   greift deshalb auf den Grund der Baustelle zurück („Vollsperrung Neubau

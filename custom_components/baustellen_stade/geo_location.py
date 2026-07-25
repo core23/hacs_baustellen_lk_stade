@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from homeassistant.components.geo_location import GeolocationEvent
-from homeassistant.const import UnitOfLength
+from homeassistant.const import Platform, UnitOfLength
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -23,15 +23,16 @@ async def async_setup_entry(
     entry: BaustellenConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Entitäten anlegen und bei jedem Abruf um neue Baustellen ergänzen."""
+    """Entitäten bei jedem Abruf an den Datenbestand des Dienstes angleichen."""
     coordinator = entry.runtime_data
     known: set[str] = set()
 
     @callback
-    def async_add_new_roadworks() -> None:
-        """Für neu hinzugekommene Baustellen Entitäten erzeugen."""
+    def async_sync_roadworks() -> None:
+        """Beendete Baustellen entfernen und neue anlegen."""
         current = {roadwork.external_id for roadwork in coordinator.data.roadworks}
         known.intersection_update(current)
+        _async_remove_gone_roadworks(hass, entry, current)
         if new := current - known:
             known.update(new)
             async_add_entities(
@@ -39,8 +40,27 @@ async def async_setup_entry(
                 for external_id in sorted(new)
             )
 
-    async_add_new_roadworks()
-    entry.async_on_unload(coordinator.async_add_listener(async_add_new_roadworks))
+    # Der erste Durchlauf räumt auch Entitäten ab, deren Baustelle verschwunden
+    # ist, während Home Assistant nicht lief.
+    async_sync_roadworks()
+    entry.async_on_unload(coordinator.async_add_listener(async_sync_roadworks))
+
+
+@callback
+def _async_remove_gone_roadworks(
+    hass: HomeAssistant, entry: BaustellenConfigEntry, current: set[str]
+) -> None:
+    """Registry-Einträge zu nicht mehr gemeldeten Baustellen löschen.
+
+    Mit dem Registry-Eintrag verschwindet auch die Entität selbst.
+    """
+    registry = er.async_get(hass)
+    prefix = f"{entry.entry_id}_"
+    for registry_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if registry_entry.domain != Platform.GEO_LOCATION:
+            continue
+        if registry_entry.unique_id.removeprefix(prefix) not in current:
+            registry.async_remove(registry_entry.entity_id)
 
 
 class BaustellenGeoLocationEvent(BaustellenEntity, GeolocationEvent):
@@ -86,19 +106,11 @@ class BaustellenGeoLocationEvent(BaustellenEntity, GeolocationEvent):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Zustand aktualisieren oder die Entität entfernen."""
+        """Zustand aktualisieren, solange die Baustelle gemeldet wird."""
         roadwork = self._find_roadwork()
         if roadwork is None:
-            # Die Baustelle ist beendet oder fällt nicht mehr unter die Filter.
-            self.hass.async_create_task(self._async_remove_entity())
+            # Die Baustelle ist beendet oder fällt nicht mehr unter die Filter;
+            # `_async_remove_gone_roadworks` entfernt die Entität bereits.
             return
         self._apply(roadwork)
         super()._handle_coordinator_update()
-
-    async def _async_remove_entity(self) -> None:
-        """Entität samt Registry-Eintrag entfernen."""
-        registry = er.async_get(self.hass)
-        if registry.async_get(self.entity_id):
-            registry.async_remove(self.entity_id)
-        else:
-            await self.async_remove(force_remove=True)

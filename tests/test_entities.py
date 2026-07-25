@@ -16,6 +16,7 @@ from custom_components.baustellen_stade.const import (
     CONF_CATEGORIES,
     CONF_ROAD_TYPES,
     CONF_UPCOMING_DAYS,
+    DOMAIN,
 )
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_UNAVAILABLE
@@ -225,6 +226,36 @@ async def test_finished_roadwork_entity_is_removed(
     assert len(hass.states.async_entity_ids("geo_location")) == 2
 
 
+async def test_stale_registry_entry_is_removed_on_setup(
+    hass: HomeAssistant, mock_api: AsyncMock, config_entry: MockConfigEntry
+) -> None:
+    """Beim Start verschwinden Entitäten, deren Baustelle nicht mehr gemeldet wird."""
+    config_entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    stale = registry.async_get_or_create(
+        "geo_location",
+        DOMAIN,
+        f"{config_entry.entry_id}_99",
+        config_entry=config_entry,
+        suggested_object_id="vollsperrung_von_gestern",
+    )
+    kept_sensor = registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"{config_entry.entry_id}_active",
+        config_entry=config_entry,
+    )
+    mock_api.async_get_roadworks.return_value = [make_roadwork("1")]
+
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert registry.async_get(stale.entity_id) is None
+    # Die Sensoren des Eintrags bleiben unangetastet.
+    assert registry.async_get(kept_sensor.entity_id) is not None
+    assert len(hass.states.async_entity_ids("geo_location")) == 1
+
+
 async def test_failed_update_marks_entities_unavailable(
     hass: HomeAssistant,
     mock_api: AsyncMock,
@@ -234,6 +265,8 @@ async def test_failed_update_marks_entities_unavailable(
     """Ein Fehler beim Abruf setzt die Entitäten auf nicht verfügbar."""
     await setup_integration(hass, config_entry)
     assert hass.states.get(SENSOR_ACTIVE).state == "1"
+    geo_entity_ids = hass.states.async_entity_ids("geo_location")
+    assert len(geo_entity_ids) == 1
 
     mock_api.async_get_roadworks.side_effect = BaustellenApiError("offline")
     freezer.tick(timedelta(minutes=31))
@@ -241,6 +274,8 @@ async def test_failed_update_marks_entities_unavailable(
     await hass.async_block_till_done()
 
     assert hass.states.get(SENSOR_ACTIVE).state == STATE_UNAVAILABLE
+    # Ein Ausfall des Dienstes darf keine Baustelle löschen.
+    assert er.async_get(hass).async_get(geo_entity_ids[0]) is not None
 
 
 async def test_setup_fails_when_service_unavailable(
