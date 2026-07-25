@@ -1,0 +1,55 @@
+<!doctype html>
+<!--
+  Quelle des Integrations-Icons (images/icon.png, images/icon@2x.png).
+  Format nach den Vorgaben von home-assistant/brands: quadratisch, transparent.
+-->
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>Icon</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 256px;
+        height: 256px;
+        background: transparent;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="256" height="256" viewBox="0 0 256 256" fill="none">
+      <defs>
+        <linearGradient id="cone" x1="128" y1="24" x2="128" y2="206">
+          <stop offset="0" stop-color="#ffc046" />
+          <stop offset="1" stop-color="#f08c00" />
+        </linearGradient>
+        <linearGradient id="road" x1="20" y1="222" x2="236" y2="222">
+          <stop offset="0" stop-color="#4fc3f7" />
+          <stop offset="1" stop-color="#0288d1" />
+        </linearGradient>
+      </defs>
+
+      <!-- Straße -->
+      <rect x="16" y="206" width="224" height="34" rx="17" fill="url(#road)" />
+      <g stroke="#ffffff" stroke-opacity="0.85" stroke-width="7" stroke-linecap="round">
+        <path d="M46 223 H74" />
+        <path d="M114 223 H142" />
+        <path d="M182 223 H210" />
+      </g>
+
+      <!-- Leitkegel -->
+      <path
+        d="M128 22 C 134 22, 138 26, 140 33 L 186 186 C 188 192, 184 197, 178 197 H 78 C 72 197, 68 192, 70 186 L 116 33 C 118 26, 122 22, 128 22 Z"
+        fill="url(#cone)"
+      />
+      <path d="M104 96 H152 L163 133 H93 Z" fill="#ffffff" fill-opacity="0.94" />
+      <rect x="52" y="182" width="152" height="26" rx="13" fill="#ffb74d" />
+    </svg>
+  </body>
+</html>

@@ -1,5 +1,7 @@
 # Baustellen Landkreis Stade – Home Assistant Integration
 
+![Baustellen Landkreis Stade](images/preview.png)
+
 Zeigt die aktuellen und geplanten Baustellen und Sperrungen im Landkreis Stade in
 Home Assistant an. Datengrundlage ist derselbe ArcGIS-Dienst, der auch die
 [Karte „Baustellen und Sperrungen im Landkreis Stade“](https://lkstade.maps.arcgis.com/apps/instant/sidebar/index.html?appid=6c6c67e8b366480586f363c17056d325)
@@ -113,3 +115,16 @@ logger:
 
 Über *Geräte & Dienste → Baustellen Landkreis Stade → Diagnose herunterladen*
 lässt sich der komplette abgerufene Datenbestand exportieren.
+
+## Bildmaterial
+
+Die Grafiken in `images/` entstehen aus den mitgelieferten HTML-Quellen und
+lassen sich jederzeit neu erzeugen:
+
+```bash
+cd images && ./render.sh
+```
+
+`icon.png` (256 px) und `icon@2x.png` (512 px) erfüllen die Vorgaben von
+[home-assistant/brands](https://github.com/home-assistant/brands) – dort
+eingereicht, zeigen HACS und Home Assistant das Icon der Integration an.

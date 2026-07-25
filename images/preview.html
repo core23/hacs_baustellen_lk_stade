@@ -1,0 +1,409 @@
+<!doctype html>
+<!--
+  Quelle des Vorschaubilds (images/preview.png).
+  Neu erzeugen:
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless \
+      --screenshot=preview@2x.png --window-size=1200,630 \
+      --force-device-scale-factor=2 --hide-scrollbars file://$PWD/preview.html
+    magick preview@2x.png -resize 1200x630 preview.png
+-->
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>Baustellen Landkreis Stade</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+      }
+
+      body {
+        display: flex;
+        font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+        color: #eef2f8;
+        background: #0f1622;
+        position: relative;
+      }
+
+      /* Hintergrund: stilisierter Kartenausschnitt */
+      .map {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            circle at 78% 28%,
+            rgba(3, 169, 244, 0.22),
+            transparent 55%
+          ),
+          radial-gradient(
+            circle at 18% 88%,
+            rgba(245, 166, 35, 0.16),
+            transparent 50%
+          ),
+          linear-gradient(145deg, #131c2b 0%, #0d131e 55%, #0a0f18 100%);
+      }
+
+      .grid {
+        position: absolute;
+        inset: 0;
+        opacity: 0.5;
+      }
+
+      .content {
+        position: relative;
+        display: flex;
+        width: 100%;
+        padding: 62px 64px;
+        gap: 48px;
+      }
+
+      .left {
+        display: flex;
+        flex-direction: column;
+        width: 600px;
+        padding-top: 6px;
+      }
+
+      .brandline {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 34px;
+      }
+
+      .cone {
+        width: 46px;
+        height: 46px;
+        flex: none;
+      }
+
+      .kicker {
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #f5a623;
+      }
+
+      h1 {
+        font-size: 62px;
+        line-height: 1.04;
+        font-weight: 800;
+        letter-spacing: -0.022em;
+      }
+
+      h1 .accent {
+        color: #4fc3f7;
+      }
+
+      .sub {
+        margin-top: 22px;
+        font-size: 23px;
+        line-height: 1.5;
+        color: #a9b6c9;
+        max-width: 520px;
+      }
+
+      .features {
+        margin-top: 38px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        max-width: 410px;
+      }
+
+      .chip {
+        font-size: 16.5px;
+        font-weight: 600;
+        color: #cfe0f2;
+        background: rgba(79, 195, 247, 0.1);
+        border: 1px solid rgba(79, 195, 247, 0.32);
+        border-radius: 999px;
+        padding: 9px 17px;
+      }
+
+      .footline {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 16px;
+        color: #7d8ca1;
+      }
+
+      .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #46536a;
+      }
+
+      /* Mock einer Home-Assistant-Karte */
+      .card {
+        width: 424px;
+        align-self: center;
+        background: #1b2434;
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 20px;
+        padding: 26px 26px 22px;
+        box-shadow:
+          0 30px 60px rgba(0, 0, 0, 0.5),
+          0 2px 0 rgba(255, 255, 255, 0.05) inset;
+      }
+
+      .card-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .card-title {
+        font-size: 19px;
+        font-weight: 700;
+      }
+
+      .card-sub {
+        font-size: 14px;
+        color: #8b9ab0;
+        margin-top: 2px;
+      }
+
+      .stats {
+        display: flex;
+        gap: 12px;
+        padding: 20px 0;
+      }
+
+      .stat {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.045);
+        border-radius: 13px;
+        padding: 13px 14px;
+      }
+
+      .stat .value {
+        font-size: 27px;
+        font-weight: 700;
+        line-height: 1.1;
+      }
+
+      .stat .value small {
+        font-size: 15px;
+        font-weight: 600;
+        color: #97a5ba;
+      }
+
+      .stat .label {
+        font-size: 12.5px;
+        color: #8b9ab0;
+        margin-top: 5px;
+        letter-spacing: 0.01em;
+      }
+
+      .stat.amber .value {
+        color: #ffb74d;
+      }
+
+      .stat.blue .value {
+        color: #4fc3f7;
+      }
+
+      .rows {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.055);
+      }
+
+      .row:first-child {
+        border-top: none;
+      }
+
+      .pin {
+        width: 26px;
+        height: 26px;
+        flex: none;
+      }
+
+      .row .name {
+        font-size: 15.5px;
+        font-weight: 600;
+      }
+
+      .row .meta {
+        font-size: 12.5px;
+        color: #8b9ab0;
+        margin-top: 2px;
+      }
+
+      .row .km {
+        margin-left: auto;
+        font-size: 15px;
+        font-weight: 700;
+        color: #b9c7da;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .row.planned .name,
+      .row.planned .km {
+        color: #97a5ba;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="map"></div>
+    <svg class="grid" viewBox="0 0 1200 630" fill="none">
+      <!-- Straßenraster -->
+      <g stroke="#ffffff" stroke-opacity="0.05" stroke-width="1">
+        <path d="M0 120 H1200 M0 250 H1200 M0 380 H1200 M0 510 H1200" />
+        <path d="M170 0 V630 M400 0 V630 M630 0 V630 M860 0 V630 M1080 0 V630" />
+      </g>
+      <!-- Hauptstraße mit Sperrung -->
+      <path
+        d="M-40 470 C 220 430, 300 300, 560 300 S 900 220, 1240 150"
+        stroke="#f5a623"
+        stroke-opacity="0.3"
+        stroke-width="12"
+        stroke-linecap="round"
+      />
+      <path
+        d="M-40 470 C 220 430, 300 300, 560 300 S 900 220, 1240 150"
+        stroke="#f5a623"
+        stroke-opacity="0.75"
+        stroke-width="3"
+        stroke-dasharray="16 20"
+        stroke-linecap="round"
+      />
+      <path
+        d="M-40 610 C 300 590, 420 520, 760 540 S 1040 600, 1240 560"
+        stroke="#4fc3f7"
+        stroke-opacity="0.16"
+        stroke-width="8"
+        stroke-linecap="round"
+      />
+    </svg>
+
+    <div class="content">
+      <div class="left">
+        <div class="brandline">
+          <svg class="cone" viewBox="0 0 48 48" fill="none">
+            <ellipse cx="24" cy="40.5" rx="18" ry="4.6" fill="#f5a623" fill-opacity="0.28" />
+            <path d="M24 5 L36.5 39 H11.5 Z" fill="#f5a623" />
+            <path d="M18.6 22.5 H29.4 L31.5 28.5 H16.5 Z" fill="#0f1622" fill-opacity="0.82" />
+            <rect x="7.5" y="38" width="33" height="5.4" rx="2.7" fill="#ffb74d" />
+          </svg>
+          <div class="kicker">Home Assistant Integration</div>
+        </div>
+
+        <h1>Baustellen<br /><span class="accent">Landkreis Stade</span></h1>
+
+        <p class="sub">
+          Aktuelle Sperrungen und geplante Baustellen aus dem Geoportal des
+          Landkreises – im Umkreis deines Standorts.
+        </p>
+
+        <div class="features">
+          <div class="chip">3 Sensoren</div>
+          <div class="chip">Baustellen auf der Karte</div>
+          <div class="chip">Umkreis &amp; Filter</div>
+          <div class="chip">Kein API-Schlüssel</div>
+        </div>
+
+        <div class="footline">
+          <span>HACS</span>
+          <span class="dot"></span>
+          <span>Config-Flow</span>
+          <span class="dot"></span>
+          <span>Datenquelle: Landkreis Stade</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <svg class="pin" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="11" fill="#f5a623" fill-opacity="0.16" />
+            <path d="M12 5 L18 21 H6 Z" fill="#f5a623" />
+          </svg>
+          <div>
+            <div class="card-title">Baustellen Landkreis Stade</div>
+            <div class="card-sub">Umkreis 10 km · aktualisiert vor 4 Min.</div>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat amber">
+            <div class="value">14</div>
+            <div class="label">Aktuelle Baustellen</div>
+          </div>
+          <div class="stat">
+            <div class="value">3</div>
+            <div class="label">Geplant</div>
+          </div>
+          <div class="stat blue">
+            <div class="value">0,2 <small>km</small></div>
+            <div class="label">Nächste</div>
+          </div>
+        </div>
+
+        <div class="rows">
+          <div class="row">
+            <svg class="pin" viewBox="0 0 24 24" fill="none">
+              <path d="M12 4 L19 20 H5 Z" fill="#ef5350" />
+            </svg>
+            <div>
+              <div class="name">Stade · Vollsperrung</div>
+              <div class="meta">Kreisstraße · bis 26.07.</div>
+            </div>
+            <div class="km">0,2 km</div>
+          </div>
+          <div class="row">
+            <svg class="pin" viewBox="0 0 24 24" fill="none">
+              <path d="M12 4 L19 20 H5 Z" fill="#f5a623" />
+            </svg>
+            <div>
+              <div class="name">Horneburg · Halbseitige Sperrung</div>
+              <div class="meta">Landesstraße · bis 14.08.</div>
+            </div>
+            <div class="km">3,1 km</div>
+          </div>
+          <div class="row">
+            <svg class="pin" viewBox="0 0 24 24" fill="none">
+              <path d="M12 4 L19 20 H5 Z" fill="#4fc3f7" />
+            </svg>
+            <div>
+              <div class="name">Buxtehude · Umleitung</div>
+              <div class="meta">Gemeindestraße · bis 30.09.</div>
+            </div>
+            <div class="km">4,8 km</div>
+          </div>
+          <div class="row planned">
+            <svg class="pin" viewBox="0 0 24 24" fill="none">
+              <path d="M12 4 L19 20 H5 Z" fill="#78909c" />
+            </svg>
+            <div>
+              <div class="name">Stade · geplante Baustelle</div>
+              <div class="meta">Bundesstraße · ab 03.08.</div>
+            </div>
+            <div class="km">6,4 km</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
