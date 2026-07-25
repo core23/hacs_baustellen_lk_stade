@@ -1,0 +1,56 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Baustellen im Landkreis Stade",
+        "description": "Lege den Bezugspunkt und den Umkreis fest, für den Baustellen gemeldet werden sollen.",
+        "data": {
+          "location": "Standort und Umkreis",
+          "upcoming_days": "Vorschau für geplante Baustellen"
+        },
+        "data_description": {
+          "location": "Von diesem Punkt aus werden die Entfernungen berechnet. Marker verschieben und Kreis in der Karte anpassen.",
+          "upcoming_days": "Geplante Baustellen, die innerhalb dieser Anzahl Tage beginnen, werden mit erfasst. 0 meldet nur bereits begonnene Baustellen."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Der Kartendienst des Landkreises Stade ist nicht erreichbar.",
+      "radius_too_small": "Bitte einen Umkreis von mindestens 500 m wählen."
+    },
+    "abort": {
+      "already_configured": "Für diesen Standort ist bereits ein Eintrag vorhanden."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Baustellen im Landkreis Stade",
+        "data": {
+          "radius": "Umkreis",
+          "upcoming_days": "Vorschau für geplante Baustellen",
+          "categories": "Kategorien",
+          "road_types": "Straßentypen"
+        },
+        "data_description": {
+          "upcoming_days": "Geplante Baustellen, die innerhalb dieser Anzahl Tage beginnen, werden mit erfasst. 0 meldet nur bereits begonnene Baustellen.",
+          "categories": "Leer lassen, um alle Kategorien zu berücksichtigen.",
+          "road_types": "Leer lassen, um alle Straßentypen zu berücksichtigen."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "active": {
+        "name": "Aktuelle Baustellen"
+      },
+      "upcoming": {
+        "name": "Geplante Baustellen"
+      },
+      "nearest": {
+        "name": "Nächste Baustelle"
+      }
+    }
+  }
+}

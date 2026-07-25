@@ -1,0 +1,21 @@
+# An den Ruff-Einstellungen von Home Assistant Core orientiert.
+target-version = "py313"
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "D", "RUF", "ASYNC", "T20"]
+ignore = [
+  "D203",   # Kollidiert mit D211
+  "D213",   # Kollidiert mit D212
+  "RUF001", # Deutsche Texte enthalten bewusst typografische Zeichen
+  "RUF002",
+  "RUF003",
+]
+
+[lint.isort]
+force-sort-within-sections = true
+known-first-party = ["homeassistant"]
+combine-as-imports = true
+split-on-trailing-comma = false
+
+[lint.pydocstyle]
+convention = "pep257"

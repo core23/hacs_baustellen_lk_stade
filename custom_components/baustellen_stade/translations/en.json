@@ -1,0 +1,56 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Roadworks in the district of Stade",
+        "description": "Choose the point of reference and the radius that roadworks should be reported for.",
+        "data": {
+          "location": "Location and radius",
+          "upcoming_days": "Preview for planned roadworks"
+        },
+        "data_description": {
+          "location": "Distances are calculated from this point. Drag the marker and resize the circle on the map.",
+          "upcoming_days": "Planned roadworks starting within this many days are included. 0 reports only roadworks that have already started."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "The map service of the district of Stade could not be reached.",
+      "radius_too_small": "Please choose a radius of at least 500 m."
+    },
+    "abort": {
+      "already_configured": "This location is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Roadworks in the district of Stade",
+        "data": {
+          "radius": "Radius",
+          "upcoming_days": "Preview for planned roadworks",
+          "categories": "Categories",
+          "road_types": "Road types"
+        },
+        "data_description": {
+          "upcoming_days": "Planned roadworks starting within this many days are included. 0 reports only roadworks that have already started.",
+          "categories": "Leave empty to include every category.",
+          "road_types": "Leave empty to include every road type."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "active": {
+        "name": "Current roadworks"
+      },
+      "upcoming": {
+        "name": "Planned roadworks"
+      },
+      "nearest": {
+        "name": "Nearest roadwork"
+      }
+    }
+  }
+}
