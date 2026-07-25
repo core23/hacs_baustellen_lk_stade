@@ -125,6 +125,8 @@ lassen sich jederzeit neu erzeugen:
 cd images && ./render.sh
 ```
 
-`icon.png` (256 px) und `icon@2x.png` (512 px) erfüllen die Vorgaben von
-[home-assistant/brands](https://github.com/home-assistant/brands) – dort
-eingereicht, zeigen HACS und Home Assistant das Icon der Integration an.
+Die Icons landen dabei in `custom_components/baustellen_stade/brand/` – aus
+diesem Verzeichnis liest HACS die Brand-Assets der Integration. Die Dateien
+erfüllen zugleich die Vorgaben von
+[home-assistant/brands](https://github.com/home-assistant/brands); dort
+eingereicht, zeigt auch Home Assistant selbst das Icon an.
